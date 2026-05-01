@@ -93,18 +93,23 @@ st.markdown('<div class="hero-wrap"><div class="hero-title">🎰 お題ガチャ
 if st.button("🎰 運命のお題を3つ引く！", type="primary"):
     with st.spinner("面白いネタを探しています..."):
         res_list = []
-        for _ in range(12):
-            if len(res_list) >= 3: break
+        max_retry = 30  # 失敗時のリトライ回数を増やす
+        i = 0
+        while len(res_list) < 3 and i < max_retry:
             try:
                 r = requests.get(WIKI_RANDOM_URL, headers=HEADERS, timeout=5).json()
                 if "title" in r:
-                    res_list.append({
-                        "title": r["title"], "url": r["content_urls"]["desktop"]["page"],
-                        "extract": r.get("extract", "詳細なし"),
-                        "thumb": r.get("thumbnail", {}).get("source", ""),
-                        "diff": min(max(len(r.get("extract", "")) // 150 + 1, 1), 5)
-                    })
-            except: continue
+                    # 同じタイトルの重複を防ぐ
+                    if r["title"] not in [x["title"] for x in res_list]:
+                        res_list.append({
+                            "title": r["title"], "url": r["content_urls"]["desktop"]["page"],
+                            "extract": r.get("extract", "詳細なし"),
+                            "thumb": r.get("thumbnail", {}).get("source", ""),
+                            "diff": min(max(len(r.get("extract", "")) // 150 + 1, 1), 5)
+                        })
+            except:
+                pass
+            i += 1
         st.session_state.gacha_results = res_list
         st.session_state.chosen_topic = None
     st.rerun()
